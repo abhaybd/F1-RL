@@ -1,5 +1,6 @@
 import gym
 import numpy as np
+import os
 
 MAX_LASER_RANGE = 30
 
@@ -11,12 +12,14 @@ class F1EnvWrapper(gym.Wrapper):
         steer_max = env.params["s_max"]
         vel_min = env.params["v_min"]
         vel_max = env.params["v_max"]
+        centerline_path = env.map_name + '_centerline.csv'
 
         self._init_state_supplier = init_state_supplier
         self.action_repeat = action_repeat
         self.reward_fn = reward_fn
         self.state_featurizer = state_featurizer
         self.curr_state = None
+        self.centerline = np.genfromtxt(centerline_path, delimiter=',')[:, :2]
 
         self.action_space = gym.spaces.Box(np.array([steer_min, vel_min]), np.array([steer_max, vel_max]), dtype=np.float32)
         obs_shape = state_featurizer(env.reset()).shape
