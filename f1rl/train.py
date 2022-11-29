@@ -35,15 +35,11 @@ def main():
         config = yaml.load(f, Loader=yaml.FullLoader)
     print(config)
 
-    logged_config = {k: v for k, v in config.items() if k not in
-                     {"name", "policy", "notes"}}
+    wandb.tensorboard.patch(root_logdir="runs")
     wandb.init(project=f"F1RL_{config['policy']}", entity="f1rl",
-               name=config["name"], notes=config["notes"], config=logged_config,
-               sync_tensorboard=True)
+               name=config["name"], notes=config["notes"], sync_tensorboard=True)
 
     out_dir: str = wandb.run.dir
-
-    import pdb ; pdb.set_trace()
 
     env = create_env_from_config(config, seed=config["train"]["seed"])
     eval_env = create_env_from_config(config, seed=config["eval"]["seed"])
@@ -68,6 +64,7 @@ def main():
         random_steps=config["train"]["n_random_steps"],
         save_interval=config["train"]["save_interval"] // steps_per_epoch,
         experiment_name=config["name"],
+        logdir=out_dir,
         tensorboard_dir="runs",
         save_metrics=not args.dryrun)
 

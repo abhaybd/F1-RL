@@ -12,14 +12,17 @@ def get_fn_from_file(path, fn_name):
     return d[fn_name]
 
 def create_env_from_config(config, seed=None):
-    if seed is None:
-        env = gym.make("f110_gym:f110-v0", num_agents=1)
-    else:
-        env = gym.make("f110_gym:f110-v0", num_agents=1, seed=seed)
+    env_kwargs = {
+        "num_agents": 1,
+        "map": config["env"]["map"]
+    }
+    if seed is not None:
+        env_kwargs["seed"] = seed
+    env = gym.make("f110_gym:f110-v0", **env_kwargs)
     state_featurizer = get_fn_from_file(config["env"]["state_featurizer_path"], "transform_state")
     reward_fn = get_fn_from_file(config["env"]["reward_fn_path"], "get_reward")
     create_state_sampler = get_fn_from_file(config["env"]["state_sampler_path"], "create_state_sampler")
-    init_state_sampler = create_state_sampler(env, seed)
+    init_state_sampler = create_state_sampler(seed)
     action_repeat = config["env"]["action_repeat"]
     env = F1EnvWrapper(env, init_state_sampler, state_featurizer, reward_fn, action_repeat=action_repeat)
     env = gym.wrappers.RescaleAction(env, -1, 1)

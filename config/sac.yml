@@ -20,6 +20,7 @@ eval:
   interval: 1000
 env:
   action_repeat: 5
+  map: maps/austin
   state_featurizer_path: f1rl/state_featurizers/lidar_and_curvature.py
   reward_fn_path: f1rl/reward_fns/speed_reward.py
   state_sampler_path: f1rl/state_samplers/centerline_state_sampler.py
