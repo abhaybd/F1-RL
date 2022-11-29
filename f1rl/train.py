@@ -1,22 +1,13 @@
-import gym
 import argparse
 import os
 import yaml
-import torch
-import numpy as np
 import shutil
-import pickle
-
-from tqdm import tqdm
+import wandb
 
 from d3rlpy.algos.sac import SAC
 from d3rlpy.online.buffers import ReplayBuffer
 
-
-import wandb
-
-from f1rl.env_wrapper import F1EnvWrapper
-from .util import create_env_from_config, get_fn_from_file
+from .util import create_env_from_config
 
 
 def get_args():
@@ -47,9 +38,12 @@ def main():
     logged_config = {k: v for k, v in config.items() if k not in
                      {"name", "policy", "notes"}}
     wandb.init(project=f"F1RL_{config['policy']}", entity="f1rl",
-               name=config["name"], notes=config["notes"], config=logged_config)
+               name=config["name"], notes=config["notes"], config=logged_config,
+               sync_tensorboard=True)
 
     out_dir: str = wandb.run.dir
+
+    import pdb ; pdb.set_trace()
 
     env = create_env_from_config(config, seed=config["train"]["seed"])
     eval_env = create_env_from_config(config, seed=config["eval"]["seed"])
