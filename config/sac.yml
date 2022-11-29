@@ -1,0 +1,25 @@
+name: SAC_test
+notes: Foo
+policy: SAC
+train:
+  seed: 0
+  n_steps: 1000000
+  buffer_size: 100000
+  save_interval: 10000
+  n_random_steps: 1000
+agent:
+  actor_learning_rate: 0.0003
+  critic_learning_rate: 0.0003
+  temp_learning_rate: 0.0003
+  batch_size: 256
+  gamma: 0.99
+  tau: 0.005
+  n_critics: 2
+eval:
+  seed: 42
+  interval: 1000
+env:
+  action_repeat: 5
+  state_featurizer_path: f1rl/state_featurizers/lidar_and_curvature.py
+  reward_fn_path: f1rl/reward_fns/speed_reward.py
+  state_sampler_path: f1rl/state_samplers/centerline_state_sampler.py

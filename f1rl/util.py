@@ -13,13 +13,15 @@ def get_fn_from_file(path, fn_name):
 
 def create_env_from_config(config, seed=None):
     if seed is None:
-        env = gym.make("f110_gym:f110-v0")
+        env = gym.make("f110_gym:f110-v0", num_agents=1)
     else:
-        env = gym.make("f110_gym:f110-v0", seed=seed)
+        env = gym.make("f110_gym:f110-v0", num_agents=1, seed=seed)
     state_featurizer = get_fn_from_file(config["env"]["state_featurizer_path"], "transform_state")
-    reward_fn = get_fn_from_file(config["train"]["reward_fn_path"], "get_reward")
+    reward_fn = get_fn_from_file(config["env"]["reward_fn_path"], "get_reward")
+    create_state_sampler = get_fn_from_file(config["env"]["state_sampler_path"], "create_state_sampler")
+    init_state_sampler = create_state_sampler(env, seed)
     action_repeat = config["env"]["action_repeat"]
-    env = F1EnvWrapper(env, lambda: np.zeros((1,2)), state_featurizer, reward_fn, action_repeat=action_repeat)
+    env = F1EnvWrapper(env, init_state_sampler, state_featurizer, reward_fn, action_repeat=action_repeat)
     env = gym.wrappers.RescaleAction(env, -1, 1)
     return env
 

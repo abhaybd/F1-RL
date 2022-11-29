@@ -2,7 +2,7 @@
 f1tenth_gym/
 wandb/
 runs/
-
+config/
 
 # Created by https://www.toptal.com/developers/gitignore/api/python,windows,linux
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,windows,linux
