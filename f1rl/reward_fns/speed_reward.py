@@ -1,5 +1,5 @@
 import numpy as np
-COLLISION_WEIGHT = 0.1
+COLLISION_WEIGHT = 10
 CENTRIPETAL_WEIGHT = 0.1
 
 def get_reward(state, action, next_state):
