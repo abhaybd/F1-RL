@@ -31,6 +31,8 @@ class F1EnvWrapper(gym.Wrapper):
         action = np.expand_dims(action, axis=0)
         for _ in range(self.action_repeat):
             next_state, _, done, info = self.env.step(action)
+            if done:
+                break
         features = self._transform_state(next_state, prev_state=self.curr_state, prev_action=action)
         reward = self.reward_fn(self.curr_state, action, next_state)
         self.curr_state = next_state
