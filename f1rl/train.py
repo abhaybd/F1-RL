@@ -36,7 +36,9 @@ def main():
     print(config)
 
     wandb.tensorboard.patch(root_logdir="runs")
-    wandb.init(project=f"F1RL_{config['policy']}", entity="f1rl",
+    logged_config = {k: v for k, v in config.items() if k not in
+                    {"name", "policy", "notes"}}
+    wandb.init(project=f"F1RL_{config['policy']}", entity="f1rl", config=logged_config,
                name=config["name"], notes=config["notes"], sync_tensorboard=True)
 
     out_dir: str = wandb.run.dir
@@ -63,10 +65,11 @@ def main():
         n_steps=config["train"]["n_steps"],
         random_steps=config["train"]["n_random_steps"],
         save_interval=config["train"]["save_interval"] // steps_per_epoch,
-        experiment_name=config["name"],
+        experiment_name="model",
         logdir=out_dir,
         tensorboard_dir="runs",
-        save_metrics=not args.dryrun)
+        save_metrics=not args.dryrun,
+        with_timestamp=False)
 
 
 if __name__ == "__main__":
