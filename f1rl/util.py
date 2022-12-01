@@ -11,7 +11,7 @@ def get_fn_from_file(path, fn_name):
     exec(code, d, d)
     return d[fn_name]
 
-def create_env_from_config(config, seed=None):
+def create_env_from_config(config, seed=None, finite_horizon=True):
     env_kwargs = {
         "num_agents": 1,
         "map": config["env"]["map"]
@@ -26,6 +26,8 @@ def create_env_from_config(config, seed=None):
     action_repeat = config["env"]["action_repeat"]
     env = F1EnvWrapper(env, init_state_sampler, state_featurizer, reward_fn, action_repeat=action_repeat)
     env = gym.wrappers.RescaleAction(env, -1, 1)
+    if finite_horizon:
+        env = gym.wrappers.TimeLimit(env, config["env"]["horizon"])
     return env
 
 def load_env_from_config_path(config_path: str, seed=None):

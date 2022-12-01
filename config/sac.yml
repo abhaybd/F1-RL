@@ -5,7 +5,7 @@ train:
   seed: 0
   n_steps: 1000000
   buffer_size: 100000
-  save_interval: 10000
+  save_interval: 1000
   n_random_steps: 1000
 agent:
   actor_learning_rate: 0.0003
@@ -19,7 +19,8 @@ eval:
   seed: 42
   interval: 1000
 env:
-  action_repeat: 5
+  horizon: 6000 # 20hz * 5min = 6000
+  action_repeat: 5 # 100hz/5=20hz
   map: maps/austin
   state_featurizer_path: f1rl/state_featurizers/lidar_and_curvature.py
   reward_fn_path: f1rl/reward_fns/speed_reward.py
