@@ -18,6 +18,7 @@ def get_args():
     parser.add_argument("weights_file_basename", help="Basename of weights file to load, i.e. model_1000.pt")
     parser.add_argument("--gpu", action="store_true", help="Use gpu")
     parser.add_argument("-n", "--n_rollouts", type=int, default=10, help="Number of rollouts. (default 10)")
+    parser.add_argument("-l", "--local", action="store_true", help="Evaluate a local checkpoint")
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-r", "--render", action="store_true", help="Render rollout")
     group.add_argument("-v", "--video", action="store_true", help="Save video")
@@ -34,14 +35,21 @@ def main():
         return wandb.restore(path, run_path=args.run_path, root=tmp_dir)
 
     try:
-        config_file_stream = restore_file("config.yml")
-        config = yaml.load(config_file_stream, Loader=yaml.FullLoader)
-        config["env"]["state_featurizer_path"] = restore_file(os.path.basename(config["env"]["state_featurizer_path"])).name
-        config["env"]["reward_fn_path"] = restore_file(os.path.basename(config["env"]["reward_fn_path"])).name
-        config["env"]["state_sampler_path"] = restore_file(os.path.basename(config["env"]["state_sampler_path"])).name
+        if args.local:
+            with open(os.path.join(args.run_path, 'config.yml')) as config_file_stream:
+                config = yaml.load(config_file_stream, Loader=yaml.FullLoader)
 
-        params_file = restore_file("model/params.json").name
-        weights_file = restore_file(f"model/{args.weights_file_basename}").name
+            params_file = os.path.join(args.run_path, "model/params.json")
+            weights_file = os.path.join(args.run_path, f"model/{args.weights_file_basename}")
+        else:
+            config_file_stream = restore_file("config.yml")
+            config = yaml.load(config_file_stream, Loader=yaml.FullLoader)
+            config["env"]["state_featurizer_path"] = restore_file(os.path.basename(config["env"]["state_featurizer_path"])).name
+            config["env"]["reward_fn_path"] = restore_file(os.path.basename(config["env"]["reward_fn_path"])).name
+            config["env"]["state_sampler_path"] = restore_file(os.path.basename(config["env"]["state_sampler_path"])).name
+
+            params_file = restore_file("model/params.json").name
+            weights_file = restore_file(f"model/{args.weights_file_basename}").name
         agent: d3rlpy.algos.AlgoBase = SAC.from_json(params_file, use_gpu=args.gpu)
         agent.load_model(weights_file)
 
