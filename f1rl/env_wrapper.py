@@ -21,7 +21,7 @@ class F1EnvWrapper(gym.Wrapper):
         self.centerline = np.genfromtxt(centerline_path, delimiter=',', dtype=np.float32)
 
         self.action_space = gym.spaces.Box(np.array([steer_min, vel_min]), np.array([steer_max, vel_max]), dtype=np.float32)
-        obs_shape = self._transform_state(env.reset(init_state_supplier(self))).shape
+        obs_shape = self._transform_state(env.reset(init_state_supplier(self))[0]).shape
         self.observation_space = gym.spaces.Box(-np.inf, np.inf, shape=obs_shape, dtype=np.float32)
 
     def _transform_state(self, *args, **kwargs):

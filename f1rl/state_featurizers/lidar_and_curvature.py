@@ -85,7 +85,7 @@ def transform_state(env: F1EnvWrapper, state, prev_state=None, prev_action=None)
     angle_of_attack = np.array([angle_to_centerline(pose, env.centerline)])
     scans = downsample(state["scans"][idx], N_LIDAR)
     if prev_action is not None:
-        prev_steer = np.array([prev_action[0]])
+        prev_steer = np.array([prev_action[idx, 0]])
     else:
         prev_steer = np.array([0.])
     collision = np.array([state["collisions"][idx]])
