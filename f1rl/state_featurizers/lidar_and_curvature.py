@@ -74,6 +74,7 @@ def transform_state(env: F1EnvWrapper, state, prev_state=None, prev_action=None)
     idx = state["ego_idx"]
     pose = np.array([state[s][idx]
                     for s in ["poses_x", "poses_y", "poses_theta"]])
+    pose[2] = np.mod(pose[2], 2 * np.pi)
     signed_speed = env.sim.agents[idx].state[3]
     vel_direction = env.sim.agents[idx].state[6]
     vel = np.array([signed_speed * np.cos(vel_direction), signed_speed * np.sin(vel_direction)])
