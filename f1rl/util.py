@@ -1,3 +1,4 @@
+from f110_gym.envs.base_classes import Integrator
 import yaml
 import gym
 import numpy as np
@@ -18,7 +19,7 @@ def create_env_from_config(config, seed=None, finite_horizon=True):
     }
     if seed is not None:
         env_kwargs["seed"] = seed
-    env = gym.make("f110_gym:f110-v0", **env_kwargs)
+    env = gym.make("f110_gym:f110-v0", integrator=Integrator.Euler, **env_kwargs)
     state_featurizer = get_fn_from_file(config["env"]["state_featurizer_path"], "transform_state")
     reward_fn = get_fn_from_file(config["env"]["reward_fn_path"], "get_reward")
     create_state_sampler = get_fn_from_file(config["env"]["state_sampler_path"], "create_state_sampler")
