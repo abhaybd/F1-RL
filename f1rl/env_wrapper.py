@@ -18,20 +18,20 @@ class F1EnvWrapper(gym.Wrapper):
         self.reward_fn = reward_fn
         self.state_featurizer = state_featurizer
         self.curr_state = None
-        self.centerline = np.genfromtxt(centerline_path, delimiter=',')
+        self.centerline = np.genfromtxt(centerline_path, delimiter=',', dtype=np.float32)
 
         self.action_space = gym.spaces.Box(np.array([steer_min, vel_min]), np.array([steer_max, vel_max]), dtype=np.float32)
         obs_shape = self._transform_state(env.reset(init_state_supplier(self))).shape
         self.observation_space = gym.spaces.Box(-np.inf, np.inf, shape=obs_shape, dtype=np.float32)
 
-    def _transform_state(self, state):
-        return self.state_featurizer(self, state)
+    def _transform_state(self, *args, **kwargs):
+        return self.state_featurizer(self, *args, **kwargs)
 
     def step(self, action):
         action = np.expand_dims(action, axis=0)
         for _ in range(self.action_repeat):
             next_state, _, done, info = self.env.step(action)
-        features = self._transform_state(next_state)
+        features = self._transform_state(next_state, prev_state=self.curr_state, prev_action=action)
         reward = self.reward_fn(self.curr_state, action, next_state)
         self.curr_state = next_state
         return features, reward, done, info
