@@ -54,6 +54,18 @@ class F1EnvWrapper(gym.Wrapper):
     def _transform_state(self, *args, **kwargs):
         return self.state_featurizer(self, *args, **kwargs)
 
+    def _augment_curr_state(self, curr_state):
+        """augments state dict in-place and returns it"""
+        slip_angles = np.empty(self.env.num_agents)
+        for i in range(self.env.num_agents):
+            agent_state = self.env.sim.agents[i].state
+            slip_angles[i] = agent_state[6]
+            signed_speed = agent_state[3]
+            curr_state["linear_vels_x"][i] = signed_speed * np.cos(slip_angles[i])
+            curr_state["linear_vels_y"][i] = signed_speed * np.sin(slip_angles[i])
+        curr_state["slip_angles"] = slip_angles
+        return curr_state
+
     def step(self, action):
         action = np.expand_dims(action, axis=0)
         for _ in range(self.action_repeat):
@@ -62,14 +74,14 @@ class F1EnvWrapper(gym.Wrapper):
                 break
         features = self._transform_state(next_state, prev_state=self.curr_state, prev_action=action)
         reward = self.reward_fn(self.curr_state, action, next_state)
-        self.curr_state = next_state
+        self.curr_state = self._augment_curr_state(next_state)
         return features, reward, done, info
     
     def reset(self):
         init_state = self.init_state_supplier(self)
         next_state, *_ = self.env.reset(init_state)
-        self.curr_state = next_state
-        return self._transform_state(next_state)
+        self.curr_state = self._augment_curr_state(next_state)
+        return self._transform_state(self.curr_state)
 
     def _draw_car(self, screen, pose, color):
         origin = np.array(self.map_cfg["origin"][:2])

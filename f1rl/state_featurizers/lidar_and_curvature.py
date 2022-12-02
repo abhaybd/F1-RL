@@ -75,13 +75,12 @@ def transform_state(env: F1EnvWrapper, state, prev_state=None, prev_action=None)
     pose = np.array([state[s][idx]
                     for s in ["poses_x", "poses_y", "poses_theta"]])
     pose[2] = np.mod(pose[2], 2 * np.pi)
-    signed_speed = env.sim.agents[idx].state[3]
-    vel_direction = env.sim.agents[idx].state[6]
-    vel = np.array([signed_speed * np.cos(vel_direction), signed_speed * np.sin(vel_direction)])
+    vel = np.array([state[s][idx] for s in ["linear_vels_x", "linear_vels_y"]])
     if prev_state is not None:
-        accel = np.array([signed_speed - prev_state["linear_vels_x"][idx]]) # it's like kind of acceleration
+        last_vel = np.array([prev_state[s][idx] for s in ["linear_vels_x", "linear_vels_y"]])
+        accel = vel - last_vel
     else:
-        accel = np.array([0.])
+        accel = np.zeros_like(vel)
     angle_of_attack = np.array([angle_to_centerline(pose, env.centerline)])
     scans = downsample(state["scans"][idx], N_LIDAR)
     if prev_action is not None:
