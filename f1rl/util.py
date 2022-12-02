@@ -1,9 +1,8 @@
 from f110_gym.envs.base_classes import Integrator
 import yaml
 import gym
-import numpy as np
 
-from f1rl.env_wrapper import F1EnvWrapper
+from f1rl.env_wrapper import F1EnvWrapper, UnevenSignedActionRescale
 
 def get_fn_from_file(path, fn_name):
     with open(path) as f:
@@ -26,7 +25,7 @@ def create_env_from_config(config, seed=None, finite_horizon=True):
     init_state_sampler = create_state_sampler(seed)
     action_repeat = config["env"]["action_repeat"]
     env = F1EnvWrapper(env, init_state_sampler, state_featurizer, reward_fn, action_repeat=action_repeat)
-    env = gym.wrappers.RescaleAction(env, -1, 1)
+    env = UnevenSignedActionRescale(env, -1, 1)
     if finite_horizon:
         env = gym.wrappers.TimeLimit(env, config["env"]["horizon"])
     return env

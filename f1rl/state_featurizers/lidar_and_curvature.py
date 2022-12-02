@@ -74,14 +74,13 @@ def transform_state(env: F1EnvWrapper, state, prev_state=None, prev_action=None)
     idx = state["ego_idx"]
     pose = np.array([state[s][idx]
                     for s in ["poses_x", "poses_y", "poses_theta"]])
-    vel = np.array([state[s][idx]
-                   for s in ["linear_vels_x", "linear_vels_y", "ang_vels_z"]])
+    signed_speed = env.sim.agents[idx].state[3]
+    vel_direction = env.sim.agents[idx].state[6]
+    vel = np.array([signed_speed * np.cos(vel_direction), signed_speed * np.sin(vel_direction)])
     if prev_state is not None:
-        prev_vel = np.array([prev_state[s][idx] for s in [
-                            "linear_vels_x", "linear_vels_y", "ang_vels_z"]])
-        accel = vel - prev_vel  # not actually acceleration, but it's proportional
+        accel = np.array([signed_speed - prev_state["linear_vels_x"][idx]]) # it's like kind of acceleration
     else:
-        accel = np.zeros_like(vel)
+        accel = np.array([0.])
     angle_of_attack = np.array([angle_to_centerline(pose, env.centerline)])
     scans = downsample(state["scans"][idx], N_LIDAR)
     if prev_action is not None:

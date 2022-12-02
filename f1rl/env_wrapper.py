@@ -8,6 +8,25 @@ import pygame
 
 MAP_SCALE_FACTOR = 0.8
 
+class UnevenSignedActionRescale(gym.ActionWrapper):
+    """
+    Scales between two ranges containing zero, unevenly between negatives and positives.
+    This maps zero to zero.
+    """
+    def __init__(self, env, low, high):
+        super().__init__(env)
+        low = np.broadcast_to(low, env.action_space.shape).astype(np.float32)
+        high = np.broadcast_to(high, env.action_space.shape).astype(np.float32)
+        self.action_space = gym.spaces.Box(low, high, dtype=np.float32)
+        self.pos_scale = env.action_space.high / self.action_space.high
+        self.neg_scale = env.action_space.low / self.action_space.low
+
+    def action(self, act):
+        pos_mask = act >= 0
+        act[pos_mask] *= self.pos_scale[pos_mask]
+        act[~pos_mask] *= self.neg_scale[~pos_mask]
+        return act
+
 class F1EnvWrapper(gym.Wrapper):
     env: gym.Env
     def __init__(self, env, init_state_supplier, state_featurizer, reward_fn, action_repeat=1):
