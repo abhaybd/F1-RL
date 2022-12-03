@@ -43,6 +43,7 @@ class F1EnvWrapper(gym.Wrapper):
         self.state_featurizer = state_featurizer
         self.curr_state = None
         self.screen = None
+        self.font = None
         self.map_img = None
         self.map_cfg = None
         self.centerline = np.genfromtxt(centerline_path, delimiter=',', dtype=np.float32)
@@ -109,6 +110,8 @@ class F1EnvWrapper(gym.Wrapper):
         if mode != "human":
             return super().render(mode)
         pygame.init()
+        if self.font is None:
+            self.font = pygame.font.SysFont(None, 24)
         if self.map_img is None:
             self.map_img = pygame.image.load(self.env.map_name + self.env.map_ext)
             self.map_img = pygame.transform.rotozoom(self.map_img, 0, MAP_SCALE_FACTOR)
@@ -128,4 +131,6 @@ class F1EnvWrapper(gym.Wrapper):
             pose = np.array([self.curr_state[s][i] for s in ["poses_x", "poses_y", "poses_theta"]])
             self._draw_car(map_screen, pose, car_colors[i])
         self.screen.blit(map_screen, (0, 0), area=pygame.Rect(0, map_screen.get_height() / 5, map_screen.get_width(), 3 * map_screen.get_height() / 5))
+        img = self.font.render(f"{self.curr_state['linear_vels_x'][0]:.2f} m/s", True, (0, 0, 255))
+        self.screen.blit(img, (20, 20))
         pygame.display.flip()
