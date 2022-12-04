@@ -19,6 +19,7 @@ def get_args():
     parser.add_argument("--gpu", action="store_true", help="Use gpu")
     parser.add_argument("-n", "--n_rollouts", type=int, default=10, help="Number of rollouts. (default 10)")
     parser.add_argument("-l", "--local", action="store_true", help="Evaluate a local checkpoint")
+    parser.add_argument("-f", "--from-file", action="store_true", help="Load a previous evaluation from a file")
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-r", "--render", action="store_true", help="Render rollout")
     group.add_argument("-v", "--video", action="store_true", help="Save video")
@@ -28,8 +29,13 @@ def main():
     args = get_args()
     assert not args.video, "Not supported yet!"
 
-    tmp_dir = f"eval/eval_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+    start_time = datetime.now().strftime('%Y%m%d%H%M%S')
+    tmp_dir = f"eval/eval_{start_time}"
     os.makedirs(tmp_dir)
+
+    if args.from_file:
+        # TODO do something here? or in another script?
+        pass
 
     def restore_file(path):
         return wandb.restore(path, run_path=args.run_path, root=tmp_dir)
@@ -57,22 +63,33 @@ def main():
 
         ep_returns = []
         ep_steps = []
+        states = []
         for _ in range(args.n_rollouts):
             state = env.reset()
+            rollout_states = [[[env.curr_state[s][i].item() for s in ["poses_x", "poses_y", "poses_theta"]]] for i in range(env.env.num_agents)]
             done = False
             ep_reward = 0
             step = 0
             while not done:
                 action = agent.predict(state.reshape(1, -1)).flatten()
                 state, reward, done, _ = env.step(action)
+                for i in range(env.env.num_agents):
+                    rollout_states[i].append([env.curr_state[s][i].item() for s in ["poses_x", "poses_y", "poses_theta"]])
                 ep_reward += reward
                 step += 1
                 if args.render:
                     env.render(mode="human")
                     time.sleep(env.timestep * config["env"]["action_repeat"])
-            ep_returns.append(ep_reward)
+            ep_returns.append(ep_reward.item())
             ep_steps.append(step)
+            states.append(rollout_states)
         print(f"Average return: {np.mean(ep_returns)}, Average ep len: {np.mean(ep_steps)}")
+
+        out_dir = "eval_saved"
+        os.makedirs(out_dir, exist_ok=True)
+        results = {"run": args.run_path, "weights_file": args.weights_file_basename, "states": states, "returns": ep_returns, "num_steps": ep_steps}
+        with open(os.path.join(out_dir, f"eval_{start_time}.yml"), "w") as f:
+            yaml.dump(results, f)
     finally:
         print("Cleaning up and exiting...")
         shutil.rmtree(tmp_dir)
