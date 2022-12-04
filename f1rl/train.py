@@ -8,6 +8,7 @@ from d3rlpy.algos.sac import SAC
 from d3rlpy.online.buffers import ReplayBuffer
 
 from .util import create_env_from_config
+from .state_samplers.constant_state_sampler import create_state_sampler as create_constant_sampler
 
 
 def get_args():
@@ -44,7 +45,7 @@ def main():
     out_dir: str = wandb.run.dir
 
     env = create_env_from_config(config, seed=config["train"]["seed"])
-    eval_env = create_env_from_config(config, seed=config["eval"]["seed"])
+    eval_env = create_env_from_config(config, seed=config["eval"]["seed"], override_state_sampler=create_constant_sampler())
 
     # copy relevant files
     config["env"]["reward_fn_path"] = save_file(out_dir, config["env"]["reward_fn_path"])

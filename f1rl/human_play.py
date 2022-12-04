@@ -5,6 +5,7 @@ import numpy as np
 import time
 
 from .env_wrapper import F1EnvWrapper, UnevenSignedActionRescale
+from .state_samplers.constant_state_sampler import create_state_sampler
 
 ACTION_REPEAT = 5
 
@@ -30,7 +31,8 @@ def get_action(joystick: pygame.joystick.Joystick):
 
 def main():
     env = gym.make("f110_gym:f110-v0", map="maps/austin", num_agents=1, integrator=Integrator.Euler)
-    env = F1EnvWrapper(env, lambda *_: np.array([[0., 0., -0.5]]), lambda *_, **__: np.zeros(1), lambda *_, **__: 0, action_repeat=ACTION_REPEAT)
+    sampler = create_state_sampler()
+    env = F1EnvWrapper(env,sampler, lambda *_, **__: np.zeros(1), lambda *_, **__: 0, action_repeat=ACTION_REPEAT)
     env = UnevenSignedActionRescale(env, -1, 1)
 
     pygame.init()

@@ -11,7 +11,7 @@ def get_fn_from_file(path, fn_name):
     exec(code, d, d)
     return d[fn_name]
 
-def create_env_from_config(config, seed=None, finite_horizon=True):
+def create_env_from_config(config, seed=None, finite_horizon=True, override_state_sampler=None):
     env_kwargs = {
         "num_agents": 1,
         "map": config["env"]["map"]
@@ -21,8 +21,11 @@ def create_env_from_config(config, seed=None, finite_horizon=True):
     env = gym.make("f110_gym:f110-v0", integrator=Integrator.Euler, **env_kwargs)
     state_featurizer = get_fn_from_file(config["env"]["state_featurizer_path"], "transform_state")
     reward_fn = get_fn_from_file(config["env"]["reward_fn_path"], "get_reward")
-    create_state_sampler = get_fn_from_file(config["env"]["state_sampler_path"], "create_state_sampler")
-    init_state_sampler = create_state_sampler(seed)
+    if override_state_sampler is None:
+        create_state_sampler = get_fn_from_file(config["env"]["state_sampler_path"], "create_state_sampler")
+        init_state_sampler = create_state_sampler(seed)
+    else:
+        init_state_sampler = override_state_sampler
     action_repeat = config["env"]["action_repeat"]
     env = F1EnvWrapper(env, init_state_sampler, state_featurizer, reward_fn, action_repeat=action_repeat)
     env = UnevenSignedActionRescale(env, -1, 1)
