@@ -1,7 +1,7 @@
 import numpy as np
-COLLISION_WEIGHT = 10
-CENTRIPETAL_WEIGHT = 0.1
-SKID_WEIGHT = 1.0
+COLLISION_WEIGHT = 5
+CENTRIPETAL_WEIGHT = 0.05
+SKID_WEIGHT = 0.5
 
 def get_reward(state, action, next_state):
     idx = next_state["ego_idx"]
