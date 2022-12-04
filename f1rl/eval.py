@@ -12,30 +12,28 @@ from d3rlpy.algos.sac import SAC
 
 from .util import create_env_from_config
 
-def get_args():
+def get_args(start_time):
     parser = argparse.ArgumentParser()
     parser.add_argument("run_path", help="wandb run path, in the form entity/project/run")
     parser.add_argument("weights_file_basename", help="Basename of weights file to load, i.e. model_1000.pt")
     parser.add_argument("--gpu", action="store_true", help="Use gpu")
     parser.add_argument("-n", "--n_rollouts", type=int, default=10, help="Number of rollouts. (default 10)")
     parser.add_argument("-l", "--local", action="store_true", help="Evaluate a local checkpoint")
-    parser.add_argument("-f", "--from-file", action="store_true", help="Load a previous evaluation from a file")
+    parser.add_argument("-s", "--save", nargs="?", default=None, const=f"eval_saved/eval_{start_time}.yml",
+                help="Save location of evaluation replay yaml. If specified without value, saves to default path.")
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-r", "--render", action="store_true", help="Render rollout")
     group.add_argument("-v", "--video", action="store_true", help="Save video")
     return parser.parse_args()
 
 def main():
-    args = get_args()
-    assert not args.video, "Not supported yet!"
-
     start_time = datetime.now().strftime('%Y%m%d%H%M%S')
+    args = get_args(start_time)
+    assert not args.video, "Not supported yet!"
+    assert not args.save or (args.save and not os.path.isfile(args.save)), "Specified eval save path already exists!"
+
     tmp_dir = f"eval/eval_{start_time}"
     os.makedirs(tmp_dir)
-
-    if args.from_file:
-        # TODO do something here? or in another script?
-        pass
 
     def restore_file(path):
         return wandb.restore(path, run_path=args.run_path, root=tmp_dir)
@@ -85,11 +83,11 @@ def main():
             states.append(rollout_states)
         print(f"Average return: {np.mean(ep_returns)}, Average ep len: {np.mean(ep_steps)}")
 
-        out_dir = "eval_saved"
-        os.makedirs(out_dir, exist_ok=True)
-        results = {"run": args.run_path, "weights_file": args.weights_file_basename, "states": states, "returns": ep_returns, "num_steps": ep_steps}
-        with open(os.path.join(out_dir, f"eval_{start_time}.yml"), "w") as f:
-            yaml.dump(results, f)
+        if args.save:
+            os.makedirs(os.path.dirname(os.path.abspath(args.save)), exist_ok=True)
+            results = {"run": args.run_path, "weights_file": args.weights_file_basename, "states": states, "returns": ep_returns, "num_steps": ep_steps}
+            with open(args.save, "w") as f:
+                yaml.dump(results, f)
     finally:
         print("Cleaning up and exiting...")
         shutil.rmtree(tmp_dir)
