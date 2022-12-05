@@ -91,7 +91,7 @@ def main():
 
         if args.save:
             os.makedirs(os.path.dirname(os.path.abspath(args.save)), exist_ok=True)
-            results = {"run": args.run_path, "weights_file": args.weights_file_basename, "states": states, "returns": ep_returns, "num_steps": ep_steps}
+            results = {"map": config["env"]["map"], "run": args.run_path, "weights_file": args.weights_file_basename, "states": states, "returns": ep_returns, "num_steps": ep_steps}
             with open(args.save, "w") as f:
                 yaml.dump(results, f)
     finally:
