@@ -10,6 +10,21 @@ def get_args():
     parser.add_argument("-i", "--index", default=0, type=int, help="Index of trajectory in recording.")
     return parser.parse_args()
 
+def trim_to_single_lap(points: np.ndarray):
+    start = points[0]
+    dists = np.linalg.norm(points - start.reshape(1, -1), axis=1)
+    thresh = 0.1
+    for _ in range(10):
+        close_to_start = dists <= thresh
+        cross_line = ~close_to_start[:-1] & close_to_start[1:]
+        if not np.any(cross_line):
+            thresh *= 2
+            print(f"Expanding loop end search to {thresh}")
+            continue
+        idx = np.where(cross_line)[0][0]
+        loop = np.vstack([points[:idx+1], [start]])
+        return loop
+
 def main():
     args = get_args()
     with open(args.recording_path, "r") as f:
@@ -23,11 +38,14 @@ def main():
     dists = np.linalg.norm(ps[1:] - ps[:-1], axis=-1)
     print("Total dist:", np.sum(dists))
 
-    resolution = 0.08089
-    origin = np.array([-21.25772567260448,-70.80398789934522])
-    points = (episode[:,:2] - origin) / resolution
+    with open(f"{map}.yaml", "r") as f:
+        map_cfg = yaml.load(f, Loader=yaml.FullLoader)
+    resolution = map_cfg["resolution"]
+    origin = np.array(map_cfg["origin"][:2])
+    points = episode[:, :2]
+    points = trim_to_single_lap(points)
+    points = (points - origin) / resolution
     points[:,1] = img.height - points[:, 1]
-    points = points[:len(points)//2]
 
     raceline = np.genfromtxt(f"{map}_raceline.csv", delimiter=";", dtype=np.float32)[:,1:3]
     raceline = (raceline - origin) / resolution
