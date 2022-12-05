@@ -109,12 +109,12 @@ def main():
     ax.imshow(track, cmap="gray")
 
     def interpolate_color(value):
-        scale_fac = 1
+        scale_fac = 2
         if value < 0:
-            scale_dir = np.array([1, -1, -1])
+            scale_dir = np.array([0, -1, -1])
         else:
-            scale_dir = np.array([-1, -1, 1])
-        return np.clip(np.array([0.5, 0.5, 0.5]) + np.abs(value) * scale_fac * scale_dir, 0, 1)
+            scale_dir = np.array([-1, -1, 0])
+        return np.clip(np.array([1, 1, 1]) + np.abs(value) * scale_fac * scale_dir, 0, 1)
     for point, curvature in zip(points, curvatures):
         px_x, px_y = (point - origin) / M_PER_PX
         color = interpolate_color(curvature)
