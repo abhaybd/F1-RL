@@ -68,6 +68,7 @@ def main():
             done = False
             ep_reward = 0
             step = 0
+            prev_ts = time.time()
             while not done:
                 action = agent.predict(state.reshape(1, -1)).flatten()
                 state, reward, done, _ = env.step(action)
@@ -77,7 +78,12 @@ def main():
                 step += 1
                 if args.render:
                     env.render(mode="human")
-                    time.sleep(env.timestep * config["env"]["action_repeat"])
+                    ts = time.time()
+                    desired_sleep = env.timestep * config["env"]["action_repeat"]
+                    elapsed = ts - prev_ts
+                    if desired_sleep > elapsed:
+                        time.sleep(desired_sleep - elapsed)
+                    prev_ts = ts
             ep_returns.append(ep_reward.item())
             ep_steps.append(step)
             states.append(rollout_states)

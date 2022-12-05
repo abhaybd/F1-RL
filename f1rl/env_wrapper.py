@@ -84,6 +84,14 @@ class F1EnvWrapper(gym.Wrapper):
         self.curr_state = self._augment_curr_state(next_state)
         return self._transform_state(self.curr_state)
 
+    def _pos_m_to_px(self, screen, pose):
+        origin = np.array(self.map_cfg["origin"][:2])
+        m_per_px = self.map_cfg["resolution"] / MAP_SCALE_FACTOR
+        point = pose[:-1]
+        pos_px = np.around((point - origin) / m_per_px).astype(int)
+        pos_px[1] = screen.get_height() - pos_px[1]
+        return pos_px
+
     def _draw_car(self, screen, pose, color):
         origin = np.array(self.map_cfg["origin"][:2])
         m_per_px = self.map_cfg["resolution"] / MAP_SCALE_FACTOR
@@ -107,7 +115,7 @@ class F1EnvWrapper(gym.Wrapper):
         pygame.draw.polygon(screen, color, car_poly)
 
     def render(self, mode="human"):
-        if mode != "human":
+        if mode != "human" and mode != "human_zoom":
             return super().render(mode)
         pygame.init()
         if self.font is None:
@@ -130,7 +138,24 @@ class F1EnvWrapper(gym.Wrapper):
         for i in range(self.env.num_agents):
             pose = np.array([self.curr_state[s][i] for s in ["poses_x", "poses_y", "poses_theta"]])
             self._draw_car(map_screen, pose, car_colors[i])
-        self.screen.blit(map_screen, (0, 0), area=pygame.Rect(0, map_screen.get_height() / 5, map_screen.get_width(), 3 * map_screen.get_height() / 5))
+        if mode == "human":
+            self.screen.blit(map_screen, (0, 0), area=pygame.Rect(0, map_screen.get_height() / 5, map_screen.get_width(), 3 * map_screen.get_height() / 5))
+        else:
+            def blitRotate(surf, image, pos, originPos, angle):
+                image_rect = image.get_rect(topleft = (pos[0] - originPos[0], pos[1]-originPos[1]))
+                offset_center_to_pivot = pygame.math.Vector2(pos) - image_rect.center
+                rotated_offset = offset_center_to_pivot.rotate(-angle)
+                rotated_image_center = (pos[0] - rotated_offset.x, pos[1] - rotated_offset.y)
+                rotated_image = pygame.transform.rotate(image, angle)
+                rotated_image_rect = rotated_image.get_rect(center = rotated_image_center)
+                surf.blit(rotated_image, rotated_image_rect)
+            pose = np.array([self.curr_state[s][0] for s in ["poses_x", "poses_y", "poses_theta"]])
+            car_pos_px = pygame.Vector2(*self._pos_m_to_px(map_screen, pose))
+            intermediate = pygame.Surface([x//2 for x in self.screen.get_size()])
+            inter_center = pygame.Vector2(*self.screen.get_size())/4
+            blitRotate(intermediate, map_screen, inter_center, car_pos_px, 90 - pose[2]*180/np.pi)
+            intermediate = pygame.transform.rotozoom(intermediate, 0, 2)
+            self.screen.blit(intermediate, (0,0))
         img = self.font.render(f"{self.curr_state['linear_vels_x'][0]:.2f} m/s", True, (0, 0, 255))
         self.screen.blit(img, (20, 20))
         pygame.display.flip()

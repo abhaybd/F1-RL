@@ -11,11 +11,15 @@ ACTION_REPEAT = 5
 
 def get_action(joystick: pygame.joystick.Joystick):
     if joystick is not None:
-        brake = joystick.get_axis(2)
-        accel = joystick.get_axis(5)
-        steer = joystick.get_axis(0)
-        print(brake, accel, steer)
-        return np.zeros(2)
+        brake = (joystick.get_axis(4) + 1) / 2
+        accel = (joystick.get_axis(5) + 1) / 2
+        steer = -joystick.get_axis(0)
+        if brake < 0.1 and accel < 0.1:
+            throttle = 0.0
+        else:
+            throttle = -brake if (brake >= 0.1) else accel
+        # print(brake, accel, steer)
+        return np.array([steer, throttle])
     else:
         keys = pygame.key.get_pressed()
         steer, accel = 0.0, 0.0
@@ -48,18 +52,15 @@ def main():
     done = False
     ep_reward = 0
     step = 0
-    start_printing = False
     while not done:
         action = get_action(joystick)
-        if start_printing or np.any(action != 0):
-            start_printing = True
-            print(env.sim.agents[0].state)
-            print(action)
         _, reward, done, _ = env.step(action)
         ep_reward += reward
         step += 1
-        env.render(mode="human")
-        pygame.event.pump()
+        env.render(mode="human_zoom")
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                done = True
         time.sleep(env.timestep * ACTION_REPEAT)
     print(env.sim.agents[0].state)
     print(f"Accumulated {ep_reward} in {step} steps")
