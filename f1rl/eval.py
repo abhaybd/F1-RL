@@ -16,6 +16,7 @@ def get_args(start_time):
     parser = argparse.ArgumentParser()
     parser.add_argument("run_path", help="wandb run path, in the form entity/project/run")
     parser.add_argument("weights_file_basename", help="Basename of weights file to load, i.e. model_1000.pt")
+    parser.add_argument("-m", "--map", help="Path to map to use. If unspecified use the one specified in config.")
     parser.add_argument("--gpu", action="store_true", help="Use gpu")
     parser.add_argument("-n", "--n_rollouts", type=int, default=10, help="Number of rollouts. (default 10)")
     parser.add_argument("-l", "--local", action="store_true", help="Evaluate a local checkpoint")
@@ -56,6 +57,9 @@ def main():
             weights_file = restore_file(f"model/{args.weights_file_basename}").name
         agent: d3rlpy.algos.AlgoBase = SAC.from_json(params_file, use_gpu=args.gpu)
         agent.load_model(weights_file)
+
+        if args.map:
+            config["env"]["map"] = args.map
 
         env = create_env_from_config(config)
 
