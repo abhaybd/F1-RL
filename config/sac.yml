@@ -4,16 +4,16 @@ policy: SAC
 train:
   seed: 0
   n_steps: 1000000
-  buffer_size: 100000
+  buffer_size: 1000000
   save_interval: 10000
   n_random_steps: 1000
 agent:
-  actor_learning_rate: 0.0003
-  critic_learning_rate: 0.0003
-  temp_learning_rate: 0.0003
+  actor_learning_rate: 0.00003
+  critic_learning_rate: 0.00003
+  temp_learning_rate: 0.00003
   batch_size: 256
   gamma: 0.99
-  tau: 0.005
+  tau: 0.001
   n_critics: 2
 eval:
   seed: 42

@@ -58,13 +58,16 @@ class F1EnvWrapper(gym.Wrapper):
     def _augment_curr_state(self, curr_state):
         """augments state dict in-place and returns it"""
         slip_angles = np.empty(self.env.num_agents)
+        steer_angles = np.empty(self.env.num_agents)
         for i in range(self.env.num_agents):
             agent_state = self.env.sim.agents[i].state
             slip_angles[i] = agent_state[6]
             signed_speed = agent_state[3]
             curr_state["linear_vels_x"][i] = signed_speed * np.cos(slip_angles[i])
             curr_state["linear_vels_y"][i] = signed_speed * np.sin(slip_angles[i])
+            steer_angles[i] = agent_state[2]
         curr_state["slip_angles"] = slip_angles
+        curr_state["steer_angles"] = steer_angles
         return curr_state
 
     def step(self, action):

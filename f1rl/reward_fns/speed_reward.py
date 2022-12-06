@@ -2,6 +2,7 @@ import numpy as np
 COLLISION_WEIGHT = 5
 CENTRIPETAL_WEIGHT = 0.05
 SKID_WEIGHT = 0.5
+STEER_DELTA_WEIGHT = 0.1
 
 def get_reward(state, action, next_state):
     idx = next_state["ego_idx"]
@@ -12,4 +13,5 @@ def get_reward(state, action, next_state):
         collision_term = 0
     centripetal_term = CENTRIPETAL_WEIGHT * vel_term ** 2 * np.abs(np.tan(action[0, 0]))
     skid_term = SKID_WEIGHT * np.abs(next_state["linear_vels_y"][idx])
-    return vel_term - collision_term - centripetal_term - skid_term
+    steer_delta_term = STEER_DELTA_WEIGHT * np.abs(action[0, 0] - state["steer_angles"][idx])
+    return vel_term - collision_term - centripetal_term - skid_term - steer_delta_term
