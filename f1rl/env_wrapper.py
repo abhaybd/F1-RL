@@ -6,7 +6,19 @@ import os
 os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "true"
 import pygame
 
-MAP_SCALE_FACTOR = 0.8
+def get_closest_idx(pose, centerline):
+    points = centerline[:, :2]
+    pos = pose[:-1].reshape(1, -1)
+    dists = np.linalg.norm(points - pos, axis=1)
+    closest_idx = np.argmin(dists)
+    return closest_idx
+
+def get_centerline_pose(pose, centerline):
+    idx = get_closest_idx(pose, centerline)
+    next_idx = (idx + 1) % len(centerline)
+    dx, dy = centerline[next_idx, :2] - centerline[idx, :2]
+    theta = np.arctan2(dy, dx)
+    return np.array([*centerline[idx, :2], theta])
 
 class UnevenSignedActionRescale(gym.ActionWrapper):
     """
@@ -89,7 +101,7 @@ class F1EnvWrapper(gym.Wrapper):
 
     def _pos_m_to_px(self, screen, pose):
         origin = np.array(self.map_cfg["origin"][:2])
-        m_per_px = self.map_cfg["resolution"] / MAP_SCALE_FACTOR
+        m_per_px = self.map_cfg["resolution"]
         point = pose[:-1]
         pos_px = np.around((point - origin) / m_per_px).astype(int)
         pos_px[1] = screen.get_height() - pos_px[1]
@@ -97,7 +109,7 @@ class F1EnvWrapper(gym.Wrapper):
 
     def _draw_car(self, screen, pose, color):
         origin = np.array(self.map_cfg["origin"][:2])
-        m_per_px = self.map_cfg["resolution"] / MAP_SCALE_FACTOR
+        m_per_px = self.map_cfg["resolution"]
         point = pose[:-1]
         pos_px = np.around((point - origin) / m_per_px).astype(int)
         pos_px[1] = screen.get_height() - pos_px[1]
@@ -125,7 +137,6 @@ class F1EnvWrapper(gym.Wrapper):
             self.font = pygame.font.SysFont(None, 24)
         if self.map_img is None:
             self.map_img = pygame.image.load(self.env.map_name + self.env.map_ext)
-            self.map_img = pygame.transform.rotozoom(self.map_img, 0, MAP_SCALE_FACTOR)
         if self.map_cfg is None:
             with open(self.env.map_name + ".yaml", "r") as f:
                 self.map_cfg = yaml.load(f, Loader=yaml.FullLoader)
@@ -138,13 +149,16 @@ class F1EnvWrapper(gym.Wrapper):
         ]
         map_screen = pygame.Surface(self.map_img.get_size())
         map_screen.blit(self.map_img, (0, 0))
-        for i in range(self.env.num_agents):
-            pose = np.array([self.curr_state[s][i] for s in ["poses_x", "poses_y", "poses_theta"]])
-            self._draw_car(map_screen, pose, car_colors[i])
         if mode == "human":
-            self.screen.blit(map_screen, (0, 0), area=pygame.Rect(0, map_screen.get_height() / 5, map_screen.get_width(), 3 * map_screen.get_height() / 5))
+            for i in range(self.env.num_agents):
+                pose = np.array([self.curr_state[s][i] for s in ["poses_x", "poses_y", "poses_theta"]])
+                self._draw_car(map_screen, pose, car_colors[i])
+            scale_fac = min(self.screen.get_width() / map_screen.get_width(), self.screen.get_height() / map_screen.get_height())
+            map_screen = pygame.transform.rotozoom(map_screen, 0, scale_fac)
+            # map_screen = pygame.transform.smoothscale(map_screen, self.screen.get_size())
+            self.screen.blit(map_screen, (0, 0))
         else:
-            def blitRotate(surf, image, pos, originPos, angle):
+            def blitRotate(surf, image: pygame.Surface, pos, originPos, angle):
                 image_rect = image.get_rect(topleft = (pos[0] - originPos[0], pos[1]-originPos[1]))
                 offset_center_to_pivot = pygame.math.Vector2(pos) - image_rect.center
                 rotated_offset = offset_center_to_pivot.rotate(-angle)
@@ -152,12 +166,37 @@ class F1EnvWrapper(gym.Wrapper):
                 rotated_image = pygame.transform.rotate(image, angle)
                 rotated_image_rect = rotated_image.get_rect(center = rotated_image_center)
                 surf.blit(rotated_image, rotated_image_rect)
+                def mapper(p: pygame.Vector2):
+                    rel_to_center = p - pygame.Vector2(image.get_size())/2
+                    rel_to_center_rot = rel_to_center.rotate(-angle)
+                    return rel_to_center_rot + rotated_image_center
+                return mapper
             pose = np.array([self.curr_state[s][0] for s in ["poses_x", "poses_y", "poses_theta"]])
-            car_pos_px = pygame.Vector2(*self._pos_m_to_px(map_screen, pose))
+            centerline_pose = get_centerline_pose(pose, self.centerline)
+            centerline_pos_px = pygame.Vector2(*self._pos_m_to_px(map_screen, centerline_pose))
             intermediate = pygame.Surface([x//2 for x in self.screen.get_size()])
-            inter_center = pygame.Vector2(*self.screen.get_size())/4
-            blitRotate(intermediate, map_screen, inter_center, car_pos_px, 90 - pose[2]*180/np.pi)
-            intermediate = pygame.transform.rotozoom(intermediate, 0, 2)
+            SCALE = 4
+            inter_center = pygame.Vector2(*self.screen.get_size())/(2*SCALE)
+            rot_angle = 90 - centerline_pose[2]*180/np.pi
+            mapper_fn = blitRotate(intermediate, map_screen, inter_center, centerline_pos_px, rot_angle)
+            intermediate = pygame.transform.rotozoom(intermediate, 0, SCALE)
+
+            car_pos_px = pygame.Vector2(*self._pos_m_to_px(map_screen, pose))
+            car_pos_px = mapper_fn(car_pos_px) * SCALE
+            
+            m_per_px = self.map_cfg["resolution"]
+            car_len_px = self.env.params["length"] / m_per_px
+            car_width_px = self.env.params["width"] / m_per_px
+            car_theta = pose[-1] - centerline_pose[-1]
+            rot_mat = np.array([[np.cos(car_theta), np.sin(car_theta)], [-np.sin(car_theta), np.cos(car_theta)]])
+            car_poly = [
+                car_pos_px + SCALE * rot_mat @ np.array([0, -car_len_px/2]),
+                car_pos_px + SCALE * rot_mat @ np.array([-car_width_px/2, car_len_px/2]),
+                car_pos_px + SCALE * rot_mat @ np.array([car_width_px/2, car_len_px/2])
+            ]
+            car_poly = [np.around(x).astype(int) for x in car_poly]
+            pygame.draw.polygon(intermediate, (255, 0, 0), car_poly)
+            self.screen.fill((255, 255, 255))
             self.screen.blit(intermediate, (0,0))
         img = self.font.render(f"{self.curr_state['linear_vels_x'][0]:.2f} m/s", True, (0, 0, 255))
         self.screen.blit(img, (20, 20))
