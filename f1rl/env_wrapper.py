@@ -16,9 +16,33 @@ def get_closest_idx(pose, centerline):
 def get_centerline_pose(pose, centerline):
     idx = get_closest_idx(pose, centerline)
     next_idx = (idx + 1) % len(centerline)
+
+    to_next = centerline[next_idx, :2] - centerline[idx, :2]
+    to_next_norm = to_next / np.linalg.norm(to_next)
+    to_car = pose[:2] - centerline[idx, :2]
+    t = np.dot(to_car, to_next_norm) / np.linalg.norm(to_next)
+    assert t < 1
+
     dx, dy = centerline[next_idx, :2] - centerline[idx, :2]
-    theta = np.arctan2(dy, dx)
-    return np.array([*centerline[idx, :2], theta])
+    p_theta = np.arctan2(dy, dx)
+
+    if t >= 0:
+        x, y = centerline[idx, :2] + t * to_next
+        next_next_idx = (next_idx + 1) % len(centerline)
+        next_theta = np.arctan2(*(centerline[next_next_idx, :2] - centerline[next_idx, :2])[::-1])
+        theta = p_theta + t * np.arctan2(np.sin(next_theta - p_theta), np.cos(next_theta - p_theta))
+        return np.array([x, y, theta])
+    else:
+        p, prev_p = centerline[idx], centerline[idx-1]
+        to_prev = prev_p[:2] - p[:2]
+        to_prev_norm = to_prev / np.linalg.norm(to_prev)
+        prev_theta = np.arctan2(-to_prev[1], -to_prev[0])
+        t = np.dot(to_car, to_prev_norm) / np.linalg.norm(to_prev)
+        assert t < 1
+        theta = p_theta + t * np.arctan2(np.sin(prev_theta - p_theta), np.cos(prev_theta - p_theta))
+        x, y = p[:2] + t * to_prev
+        return np.array([x, y, theta])
+
 
 class UnevenSignedActionRescale(gym.ActionWrapper):
     """
