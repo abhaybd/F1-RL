@@ -7,14 +7,14 @@ from PIL import Image
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("recording_path", help="Path to recording file")
-    parser.add_argument("-i", "--index", default=0, type=int, help="Index of trajectory in recording.")
+    parser.add_argument("-i", "--index", default=-1, type=int, help="Index of trajectory in recording. By default chooses best.")
     return parser.parse_args()
 
 def trim_to_single_lap(points: np.ndarray):
     start = points[0]
     dists = np.linalg.norm(points - start.reshape(1, -1), axis=1)
     thresh = 0.1
-    for _ in range(10):
+    for _ in range(6):
         close_to_start = dists <= thresh
         cross_line = ~close_to_start[:-1] & close_to_start[1:]
         if not np.any(cross_line):
@@ -24,14 +24,34 @@ def trim_to_single_lap(points: np.ndarray):
         idx = np.where(cross_line)[0][0]
         loop = np.vstack([points[:idx+1], [start]])
         return loop
-    raise AssertionError("Agent does not complete a full lap!")
+    return None
+
+def get_episode(states, idx):
+    if idx >= 0:
+        return np.array(states[idx][0])
+    else:
+        best_idx = None
+        best_lap_time = None
+        for i in range(len(states)):
+            episode = np.array(states[i][0])
+            points = trim_to_single_lap(episode[:, :2])
+            if points is None:
+                continue
+            lap_time = len(points) / 20
+            if best_lap_time is None or lap_time < best_lap_time:
+                best_lap_time = lap_time
+                best_idx = i
+        if best_lap_time is None:
+            raise AssertionError("Agent does not complete a full lap!")
+        print(f"Using best episode index: {best_idx}")
+        return np.array(states[best_idx][0])
 
 def main():
     args = get_args()
     with open(args.recording_path, "r") as f:
         data = yaml.load(f, Loader=yaml.FullLoader)
     states = data["states"] # [episode, agent, step] => (x, y, theta)
-    episode = np.array(states[args.index][0])
+    episode = get_episode(states, args.index)
     map = data["map"] if "map" in data else "maps/austin"
     img = Image.open(f"{map}.png")
 
