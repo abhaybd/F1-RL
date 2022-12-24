@@ -1,0 +1,3 @@
+[submodule "f1tenth_gym"]
+	path = f1tenth_gym
+	url = https://github.com/abhaybd/f1tenth_gym.git
